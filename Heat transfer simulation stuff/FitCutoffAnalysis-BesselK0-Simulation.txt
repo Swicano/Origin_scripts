@@ -1,0 +1,204 @@
+string shtname$ = kclad1p0_13248_SUBPathTa;       //this is the full data sheet, with the complete temperature map
+string shtname2$ = kclad1p0_13248_PathTa;         // this is the overall data, that has already had one z-averaging put on it
+string bkname$ = Kcore1p4H123;
+string shtname3$ = 1p0;
+string shtname5$ = 1p0Sheet5;
+
+range indata =   [bkname$]shtname3$!B;
+range indata2 =  [bkname$]shtname3$!A;
+range indataX =  [bkname$]shtname$!A;   //this is the full data sheet, with the complete temperature map
+range indataZ =  [bkname$]shtname$!C;   //this is the full data sheet, with the complete temperature map
+range indataT =  [bkname$]shtname$!E;   //this is the full data sheet, with the complete temperature map
+range indataZ2 = [bkname$]shtname2$!C;  // this is the overall data, that has already had one z-averaging put on it
+range indataT2 = [bkname$]shtname2$!E;  // this is the overall data, that has already had one z-averaging put on it
+
+double minZ = indata[1];
+double maxZ = indata[2]; 
+double incZ = indata[3];  
+double minX = indata[4];
+double maxX = indata[5]; 
+double incX = indata[6];
+//   7
+//double cutX = indata[8];
+//   9
+double inCond = indata[10];
+//double discRad = indata[11];
+double discThick = indata[12];
+double inConvect= indata[13];
+//double scatRat = indata[14];
+//double extPow= indata[15];
+//double heatB = indata[16];
+double inThick = discThick*2;//indata[17];
+//double gaussWidth = indata[18];
+//double measB = indata[19];
+
+//int numCols = round((maxZ-minZ)/incZ+1);
+//int numRows = round((maxX-minX)/incX+1); 
+//int inrows = count(indataX,1);
+//int inrows = 200;                                                   //SET TO SMALL NUMBER TO TEST FAST
+
+range var0 = [bkname$]shtname5$!C;
+range var1 = [bkname$]shtname5$!B;
+var1[L]$ = Z depth or beta;
+var1[U]$ = m or OD/m;
+var1[C]$ = ?????;
+range var2 = [bkname$]shtname5$!D;  //A
+var2[L]$ = Peak Amplitude;
+var2[U]$ = T;
+var2[C]$ = DC offset;
+range var3 = [bkname$]shtname5$!E;  //A Err
+var3[L]$ = Peak Amplitude_err;
+var3[U]$ = ;
+var3[C]$ = Peak Amplitude error;
+range var4 = [bkname$]shtname5$!F;  //B
+var4[L]$ = ?;
+var4[U]$ = ????;
+var4[C]$ = Peak Position 1;
+range var5 = [bkname$]shtname5$!G;  //B err
+var5[L]$ = Wavelength;
+var5[U]$ = ?;
+var5[C]$ = Peak Position 1 ERR;
+range var6 = [bkname$]shtname5$!H;  //C
+var6[L]$ = Temperature offset;
+var6[U]$ = C;
+var6[C]$ = Room Temperature; 
+range var7 = [bkname$]shtname5$!I;  //C err
+var7[L]$ = Temperature offset_err;
+var7[U]$ = ?;
+var7[C]$ = Temperature offset error;
+range var8 = [bkname$]shtname5$!J;  //H
+var8[L]$ = H;
+var8[U]$ = W/m^2K;
+var8[C]$ = Approximated Convectivity; 
+range var9 = [bkname$]shtname5$!K;  //H err
+var9[L]$ = H error;
+var9[U]$ = ;
+var9[C]$ = Convectivity error;
+range var10 = [bkname$]shtname5$!L; // fit cutoff
+var10[L]$ = fit cutoff;
+var10[U]$ = m;
+var10[C]$ = ?????;
+range var11 = [bkname$]shtname5$!M; //H Newton
+var11[L]$ = H;
+var11[U]$ = W/m^2K;
+var11[C]$ = ?????;
+range var12 = [bkname$]shtname5$!N; //H nothing?
+var12[L]$ = dsf;
+var12[U]$ = sdf;
+var12[C]$ = ?????;
+range var13 = [bkname$]shtname5$!O;  //k approx
+var13[L]$ = K;
+var13[U]$ = W/m K;
+var13[C]$ = Approximated conductivity;
+range var14 = [bkname$]shtname5$!P;  //k err
+var14[L]$ = K error;
+var14[U]$ = ;
+var14[C]$ = conductivity error;
+
+
+int counter = 1;
+double cutX =0;
+for (cutX = 0; cutX <= 0.015; cutX = cutX + 0.0001)
+{
+//  for (iteri = minZ; iteri <= maxZ; iteri = iteri + incZ)
+//  {
+//  int coljX = 2*nint((iteri-minZ)/incZ)+3;  
+//  int coljY = coljX+1;
+//  range tempX = [bkname$]Sheet1!$(coljX)[x$(cutX):$(maxX)];  
+//  range tempY = [bkname$]Sheet1!$(coljY)[x$(cutX):$(maxX)];  
+//  nlbegin iy:=(tempX,tempY) func:=BesselK0withoffset nltree:=ParamTree;
+//  //nlfit; 
+//
+//  var0[counter]$ = .;
+//  var1[counter] = %(tempX[C]$);
+//  var2[counter] = ParamTree.A;       //BesselK0withoffset
+//  var3[counter] = ParamTree.e_A;
+//  var4[counter] = ParamTree.B;    
+//  var5[counter] = ParamTree.e_B;
+//  var6[counter] = ParamTree.C;
+//  var7[counter] = ParamTree.e_C;
+//  var8[counter] = (ParamTree.B^2)*inThick*inCond/2;
+//  var9[counter] = 2*(ParamTree.B)*(ParamTree.e_B^2)*inThick*inCond/2;
+//  var10[counter] = cutX;
+//  var13[counter] = 2*inConvect/((ParamTree.B^2)*inThick);
+//  var14[counter] = sqrt((ParamTree.e_B^2)*(4*inConvect/(inThick*ParamTree.B^3))^2);
+//  nlend;
+//  
+//  // based on Newtons Method
+//  double bestGuess = 0.05*3.14/inThick;
+//  double guessEval = tan(var4[1]*inThick)-(2*var4[counter]*bestGuess)/(var4[counter]^2-bestGuess^2);
+//  double nextBest = bestGuess;
+//  double convergcutoff = 10^-9;
+//  int tryLimit = 10000;
+//  int tryNum = 0;
+//  //while(abs(guessEval)> convergcutoff) //the for loop is the janky way to do while loops in origin labtalk
+//  for(guessEval = tan(var4[counter]*inThick)-(2*var4[counter]*bestGuess)/(var4[counter]^2-bestGuess^2); abs(guessEval)> convergcutoff; guessEval = tan(var4[counter]*inThick)-(2*var4[counter]*bestGuess)/(var4[counter]^2-bestGuess^2))
+//  {
+//  tryNum+=1; 
+//  // X(n+1) = Xn-(tan(a*l)-(2*(a)*Xn)/(a^2-Xn^2))/((-4*Xn^2*a)/(a^2-Xn^2)^2-(2*a)/(a^2-Xn^2));
+//  nextBest = bestGuess-(tan(var4[counter]*inThick)-(2*var4[counter]*bestGuess)/(var4[counter]^2-bestGuess^2))/((-4*bestGuess^2*var4[counter])/(var4[counter]^2-bestGuess^2)^2-(2*var4[counter])/(var4[counter]^2-bestGuess^2));
+//  bestGuess = nextBest;
+//  if( tryNum >tryLimit){ break;} // this works!
+//  }
+//  var12[counter] = guessEval;
+//  var11[counter] = bestGuess*inCond;
+//  
+//  
+//  counter +=1;
+//  }
+
+range var0 = [bkname$]shtname5$!C;
+loop(iterj,1,1)
+{
+range tempX = [bkname$]shtname2$!1[x$(cutX):$(maxX)]; 
+range tempY = [bkname$]shtname2$!$(6+iterj)[x$(cutX):$(maxX)];  
+nlbegin iy:=(tempX,tempY) func:=BesselK0withoffset nltree:=ParamTree;
+nlfit; 
+
+var0[counter]$ = tempY[C]$;
+var1[counter] = iterj;
+var2[counter] = ParamTree.A;       //BesselK0withoffset
+var3[counter] = ParamTree.e_A;
+var4[counter] = ParamTree.B;    
+var5[counter] = ParamTree.e_B;
+var6[counter] = ParamTree.C;
+var7[counter] = ParamTree.e_C;
+var8[counter] = (ParamTree.B^2)*inThick*inCond/2;
+var9[counter] = 2*(ParamTree.B)*(ParamTree.e_B^2)*inThick*inCond/2;
+var10[counter] = cutX;
+var13[counter] = 2*inConvect/((ParamTree.B^2)*inThick);
+var14[counter] = sqrt((ParamTree.e_B^2)*(4*inConvect/(inThick*ParamTree.B^3))^2);
+nlend;
+
+// based on Newtons Method
+double bestGuess = var4[counter]*(2*var4[counter]*inThick/3.1416)^5;
+double guessEval = tan(var4[counter]*inThick)-(2*var4[counter]*bestGuess)/(var4[counter]^2-bestGuess^2);
+double nextBest = bestGuess;
+double convergcutoff = 10^-9;
+int tryLimit = 100000;
+int tryNum = 0;
+//while(abs(guessEval)> convergcutoff) //the for loop is the janky way to do while loops in origin labtalk
+//tan(var4[counter]*inThick)-(2*var4[counter]*bestGuess)/(var4[counter]^2-bestGuess^2)
+for(guessEval = 1; abs(guessEval)> convergcutoff; guessEval = tan(var4[counter]*inThick)-(2*var4[counter]*bestGuess)/(var4[counter]^2-bestGuess^2))
+{
+tryNum+=1; 
+// X(n+1) = Xn-(tan(a*l)-(2*(a)*Xn)/(a^2-Xn^2))/((-4*Xn^2*a)/(a^2-Xn^2)^2-(2*a)/(a^2-Xn^2));
+nextBest = bestGuess-0.01*(tan(var4[counter]*inThick)-(2*var4[counter]*bestGuess)/(var4[counter]^2-bestGuess^2))/((-4*bestGuess^2*var4[counter])/(var4[counter]^2-bestGuess^2)^2-(2*var4[counter])/(var4[counter]^2-bestGuess^2));
+bestGuess = nextBest;
+
+if( tryNum >tryLimit){ break;} // this works!
+}
+var12[counter] = guessEval;
+var11[counter] = bestGuess*inCond;
+
+
+iterj+=incZ;
+counter +=1;
+}
+}
+
+
+//window -e %(shtname2$);
+//Plotxy iy:=(var1,var8,var9) plot:=201 ogl:=[shtname2$]1!;
+//addline type:=1 value:=inConvect select:=1 name:=H;
+//Plotxy iy:=((sliceTemp,sliceR2fit),(sliceTemp,sliceBfit)) plot:=200 ogl:=[Graph3]!2;
