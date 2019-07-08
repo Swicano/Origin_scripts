@@ -1,0 +1,48 @@
+// This script comes from '2x glass epoxy 160mW.opj' 
+//  it takes the converted Temperature Vs. Position data
+//  and bins it into groups of position length 'subrangeLength' 
+//  calculating the average and STE of the binned data points in X and Y
+
+range XaxisInput = col(H);
+range YaxisInput = col(I);
+range outXMean =  col(N);
+range outXSTE =  col(O);
+range outYMean =  col(P);
+range outYSTE =  col(Q);
+
+outXMean[L]$ = "Position" ;
+outXSTE[L]$ = "STE" ;
+outYMean[L]$ = "Temperature" ;
+outYSTE[L]$ = "STE" ;
+
+int totRows = XaxisInput.nRows;
+int Ncounter = 0;
+double xOffset = 0.0;
+//double subrangeStart = $(TempInput[1]); // first temperature in column
+double subrangeLength = .1;            // space between subsets
+double subrangeEnd = $(XaxisInput[1]) + subrangeLength; // expected ending temperature
+int outRowPos = 1;
+//range Tmp1 = TempInput[5-Ncounter:5];
+//TempMean[1] = Mean(Tmp1);
+//int jj = 4;
+
+loop(jj , 1 ,totRows)
+{
+if ( $(XaxisInput[jj]) > subrangeEnd )
+{
+  range Tmp1 = XaxisInput[jj-Ncounter:jj]; 
+  outXMean[outRowPos] = Mean(Tmp1)+xOffset;   
+  outXSTE[outRowPos] = StdDev(Tmp1)/sqrt(Ncounter-1);
+  range Tmp2 = YaxisInput[jj-Ncounter:jj]; 
+  outYMean[outRowPos] = Mean(Tmp2);   
+  outYSTE[outRowPos] = StdDev(Tmp2)/sqrt(Ncounter-1);
+
+     
+  subrangeEnd = $(XaxisInput[jj]) + subrangeLength; 
+  outRowPos++;
+  Ncounter = 1;
+
+
+}
+Ncounter++;
+}
