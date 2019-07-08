@@ -1,0 +1,37 @@
+// This script comes from 'discretewithsum.opj' 
+//  it calculates the first 12 terms of the solution to the temperature distribution
+//  in a thin film with a point heat source, as described in my paper
+//  
+
+string shtname$ = 1M25HDisc_22707_SUBPathTa;
+string bkname$ = Mid1; 
+
+range indata = [bkname$]SumSheet!B;  
+range inRpos = [bkname$]SumSheet!C;
+
+double inh = indata[1];
+double ink = indata[2];
+double inQ = indata[3];
+double inL = indata[4];
+double inzprime = indata[5];
+double inZ = indata[24];
+double inoffset = indata[7];
+
+int terms = 12;
+int inrows = 441;
+
+loop(rowj,1,terms)  
+{
+  double alph = indata[10+rowj];
+  range tempY = [bkname$]SumSheet!$(rowj+6);
+  range tempb = [bkname$]SumSheet!$(rowj+55);
+  tempY[C]$ = alpha_$(rowj) term;
+  tempY[L]$ = Temperature;
+  tempY[U]$ = C;
+  
+  loop(rowi,1, inrows)
+  {
+    tempY[rowi] = inQ/(pi*ink)*(bessel_k0(alph*abs(inRpos[rowi]-inoffset)))*(alph*cos(alph*(inZ+inL/2))+inh*sin(alph*(inZ+inL/2)))/(inL*(alph^2+inh^2)+2*inh)*(alph*cos(alph*(inzprime+inL/2))+inh*sin(alph*(inzprime+inL/2)));
+    tempb[1] = (alph*cos(alph*(inZ+inL/2))+inh*sin(alph*(inZ+inL/2)))/(inL*(alph^2+inh^2)+2*inh)*(alph*cos(alph*(inzprime+inL/2))+inh*sin(alph*(inzprime+inL/2))); 
+  }
+}

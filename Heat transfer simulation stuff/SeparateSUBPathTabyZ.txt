@@ -1,0 +1,48 @@
+// This script comes from 'discretewithsum.opj' 
+//  it takes the (full) output from the simulation
+//  and separates the data into columns based on the Z-depth
+//  of the temperature point
+
+string shtname$ = 1M25HDisc_22707_SUBPathTa;
+string bkname$ = Mid1; 
+
+range indata = [bkname$]Sheet1!B;
+range indata2 = [bkname$]Sheet1!A;
+range indataX = [bkname$]shtname$!A; 
+range indataZ = [bkname$]shtname$!C;
+range indataT = [bkname$]shtname$!E;
+
+double minZ = indata[1];
+double maxZ = indata[2];
+double incZ = indata[3];
+double minX = indata[4];
+double maxX = indata[5];
+double incX = indata[6];
+
+
+
+int numCols = round((maxZ-minZ)/incZ+1);
+int numRows = round((maxX-minX)/incX+1);
+int inrows = count(indataX,1);
+//int inrows = 200;                                                   //SET TO SMALL NUMBER TO TEST FAST
+
+loop(rowi,1, inrows)  
+{
+if(abs(((indataZ[rowi]-minZ)/incZ)- nint((indataZ[rowi]-minZ)/incZ)) < 0.000001)  
+{ 
+int coljX = 2*nint((indataZ[rowi]-minZ)/incZ)+3; 
+int coljY = coljX+1;
+int rowj =  nint((indataX[rowi]-minX)/incX)+1;
+range tempX = [bkname$]Sheet1!$(coljX); 
+range tempY = [bkname$]Sheet1!$(coljY);
+tempX[C]$ = $(inDataZ[rowi]);
+tempX[L]$ = Radial Pos;
+tempX[U]$ = m;
+tempX[rowj] = indataX[rowi];
+tempY[C]$ = Z = $(inDataZ[rowi]) m;
+tempY[L]$ = Temperature;
+tempY[U]$ = C;
+tempY[rowj] = indataT[rowi];
+
+}
+}

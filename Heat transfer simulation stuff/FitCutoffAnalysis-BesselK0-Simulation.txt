@@ -1,3 +1,9 @@
+// This script comes from 'XXXXXXXXXXXXX.opj' 
+//  it takes the (z-averaged) temperature profile
+//  and fits a subset of the data from x1 to x2
+//  varying x1 from 0.0 to 0.015 m to study the 
+//  effect of 'cutting off' the low R region
+
 string shtname$ = kclad1p0_13248_SUBPathTa;       //this is the full data sheet, with the complete temperature map
 string shtname2$ = kclad1p0_13248_PathTa;         // this is the overall data, that has already had one z-averaging put on it
 string bkname$ = Kcore1p4H123;
