@@ -1,0 +1,26 @@
+// This script comes from '2014-08-29 nneal at 110 test.opj' 
+//  it calculates the total area under a DSC curve
+//  the sum runs from leftpoint to rightpoint
+//  and subtracts a (separately calculated) baseline (col(j))
+//  it corrects for the units of the input and output
+//   but not for sample weight (as far as i can tell)
+
+// all the inputs that we need to get stuff done
+dataset extra1;
+int leftpoint = col(L)[1]; 
+int rightpoint = col(L)[2];
+range rd0 = col(O); // target column
+//range rd1 = col(C)[$(leftpoint):$(rightpoint)];// heaflow in
+//range rd2 = col(j)[$(leftpoint):$(rightpoint)];//constructed baseline in
+//range rd3 = extra1;
+//rd3 = rd1 -0;
+//sum(rd3);
+rd0[3]=0;
+for(RI = leftpoint; RI <= rightpoint; RI += 1)
+{
+rd0[3] += (col(C)[$(RI)] - col(j)[$(RI)])*(col(B)[$(RI)+1]-col(B)[$(RI)])*60;
+}
+rd0[4] = rd0[3]/col(L)[3];
+rd0[5] = rd0[4]/138.6*100;
+rd0[1] = sum.total;
+rd0[2] = sum.N;

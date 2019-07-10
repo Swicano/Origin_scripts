@@ -1,0 +1,75 @@
+// This script comes from 'FTIRwhereCorrespondingDSCexists.opj' 
+//  it attempts to fit a baseline to an FTIR peak with a shoulder
+//  with the intention of measuring the magnitude of the shoulder
+//  the papers ('1996' and '1976') are lost to time 
+//  probably.
+
+
+
+range r1 = F;
+range xaverage1 = G;
+range yaverage1 = H; 
+range yerror1 = I;
+range baseliner = J;
+
+
+//Method 1996?
+rowamax = list(col(E)[1] , col(A));
+rowamin = list(col(E)[2] , col(A));
+rowbmax = list(col(E)[3] , col(A));
+rowbmin = list(col(E)[4] , col(A));
+amax = Col(d)[rowamax];
+amin = Col(d)[rowamin];
+bmax = Col(d)[rowbmax];
+bmin = Col(d)[rowbmin];
+
+
+
+//Method 1976?
+//instead of grabbing the peak and trough 
+//   like in 1996, we fit a linear baseline and 
+//   grab the height of the 1141 peak above that
+// but the fucking authors fit a line in lambda not wavenumber
+//fucking dicks
+dataset baselengths = 1/col(a)*10000;
+rowa2max = list(col(E)[1] , col(A));
+rowbase1 = list(col(E)[7] , col(A)); 
+rowbase2 = list(col(E)[8] , col(A)); 
+base1y = log(Col(D)[rowbase1]);
+base2y = log(Col(D)[rowbase2]);
+slope = ((base2y)-(base1y))/(10000/col(E)[8]-10000/col(E)[7]);
+intercept = ((base1y)-(slope*(10000/col(E)[7])));
+baseliner = 10^((baselengths*slope) + (intercept));
+r1[10]=0;
+
+
+
+rowb2max = list(col(E)[5] , col(A));
+rowb2min = list(col(E)[6] , col(A));
+a2max = Col(d)[rowa2max];
+a2min = Col(j)[rowa2max];
+b2max = Col(d)[rowb2max];
+b2min = Col(d)[rowb2min];
+ratio1 = (amax-amin)/(bmax-bmin);
+ratio2 = (a2max-a2min)/(b2max-b2min);
+r1[1] = amax;
+r1[2] = amin;
+r1[3] = bmax;
+r1[4] = bmin;
+r1[5] = b2max;
+r1[6] = b2min;
+r1[7] = ratio1;
+r1[8] = ratio2;
+r1[9] = 92*ratio2 -18;
+xaverage1[1] = (col(E)[1]+col(E)[2])/2;
+xaverage1[2] = (col(E)[3]+col(E)[4])/2;
+xaverage1[3] = (col(E)[5]+col(E)[6])/2;
+xaverage1[4] = col(E)[1];
+yaverage1[1] = (col(F)[1]+col(F)[2])/2;
+yaverage1[2] = (col(F)[3]+col(F)[4])/2;
+yaverage1[3] = (col(F)[5]+col(F)[6])/2;
+yaverage1[4] = (a2max+a2min)/2;
+yerror1[1] = (col(F)[1]-col(F)[2])/2;
+yerror1[2] = (col(F)[3]-col(F)[4])/2;
+yerror1[3] = (col(F)[5]-col(F)[6])/2;
+yerror1[4] = (a2max-a2min)/2;
