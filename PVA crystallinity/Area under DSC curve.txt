@@ -3,7 +3,7 @@
 //  the sum runs from leftpoint to rightpoint
 //  and subtracts a (separately calculated) baseline (col(j))
 //  it corrects for the units of the input and output
-//   but not for sample weight (as far as i can tell)
+//   AND for the sample weight (col(l)[3])
 
 // all the inputs that we need to get stuff done
 dataset extra1;
