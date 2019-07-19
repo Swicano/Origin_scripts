@@ -1,0 +1,15 @@
+// This comes from '2018-06-01 pery DMSO temp\untitled.opj' 
+//  it is just a simple trick that i thought was worth writing down somewhere
+//  
+//  if you want to do some math just a little too complicated for the F(x) cell
+//  you can set up ranges in the script window, then use them in the F(x) cell
+//   
+//  in this case F(x) cell simply read: inY/inC *0.02
+//  and the script window read:
+
+range inY = col(B)[1:281];
+range inC = col(B)[289:569];
+
+// another trick is calling the comment cell of another column, 
+//  in case it contains numerical info, such as sample angle, or concentration
+//  col(C)[C]$
