@@ -1,0 +1,260 @@
+// This script comes from 'Full Spectra Correlation map V4.opju' 
+//  it fits a bunch of data to a set of gaussians
+//  so that i can track the peak location and width
+//  
+//  honestly i dont remember much about it, i think its a minorly adapted
+//    version of a tutorial i found somewhere. 
+//  
+
+
+
+/*
+// Begin non-linear fitting, taking input data from Column 1 (X) and 
+// Column 2 (Y) of the active worksheet,
+// specifying the fitting function as Gaussian, 
+// and creating the input parameter tree named ParamTree:
+nlbegin iy:=(1,2) func:=gauss nltree:=ParamTree;
+// Optional: let the peak center be fixed at X = 5 
+ParamTree.xc = 5;     // Assign the peak center an X-value of 5.
+ParamTree.f_xc = 1;   // Fix the peak center (f_xc = 0 is unfixed).
+// Perform the fit calculations:
+nlfit;
+// Optional: report results to the Script Window.
+type Baseline y0 is $(ParamTree.y0),; 
+type Peak Center is $(ParamTree.xc), and; 
+type Peak width (FWHM) is $(ParamTree.w);
+// end the fitting session without a Report Sheet
+nlend;
+*/
+
+// when starting, set these values lower 
+// than the final value to speed up test runs 
+
+int runsPer = 3;  	  // number of datasets (x,y pairs) in each datasheet, or: how many columns of Y data
+int totSheets = 15;	  //35 // total number of sheets of data 35
+int dataLength = 110; //201	// how many rows of Y data on each sheet
+
+// these values don't affect the calculation time
+// but are used to label the graphs correctly
+int startWaveLen = 425;
+int endWaveLen = 534;
+
+stringarray datasheets;           // the sheet name of the input sheets, each temperature
+datasheets.Add("36.4 1"); //1   // gets its own sheet and all sheets need the same number of runs,
+datasheets.Add("46 1");       // so add more at the end as needed.
+datasheets.Add("21 1");       // these numbers just help keep track of the total sheets
+datasheets.Add("67 1");
+datasheets.Add("87 1"); //5
+datasheets.Add("52 1"); 
+datasheets.Add("25 2");
+datasheets.Add("40 2");
+datasheets.Add("55 2");
+datasheets.Add("70 2"); //10
+datasheets.Add("85 2"); 
+datasheets.Add("95 2");
+datasheets.Add("55 3");
+datasheets.Add("115 2");
+datasheets.Add("21 2"); //15
+
+
+
+stringarray datatemps;
+datatemps.Add("36.4");//1     // the temperature associated with each sheet, 
+datatemps.Add("46");        // duplicates are OK, add more at the end as needed
+datatemps.Add("21");
+datatemps.Add("67");
+datatemps.Add("87");//5
+datatemps.Add("52");
+datatemps.Add("25");
+datatemps.Add("40");
+datatemps.Add("55");
+datatemps.Add("70");//10
+datatemps.Add("85");
+datatemps.Add("95");
+datatemps.Add("55");
+datatemps.Add("115");
+datatemps.Add("21");//15
+
+
+stringarray datacols;     // This describes which columns in each sheet hold the Y data, 
+datacols.Add("B");        // add more at the end as appropiate.
+datacols.Add("D");
+datacols.Add("F");
+
+stringarray wavecols;     // This describes which columns in each sheet hold the Y data, 
+wavecols.Add("A");        // add more at the end as appropiate.
+wavecols.Add("C");
+wavecols.Add("E");
+
+range var1 = [Book3]Sheet1!C;
+var1[L]$ = Temperature;
+var1[U]$ = C;
+var1[C]$ = run temp;
+range var2 = [Book3]Sheet1!D;  //y0
+var2[L]$ = y0;
+var2[U]$ = Count;
+var2[C]$ = DC offset;
+range var3 = [Book3]Sheet1!E;  //y0 Err
+var3[L]$ = y0_err;
+var3[U]$ = ;
+var3[C]$ = DC offset error;
+range var4 = [Book3]Sheet1!F;  //xc1
+var4[L]$ = Wavelength;
+var4[U]$ = nm;
+var4[C]$ = Peak Position 1;
+range var5 = [Book3]Sheet1!G;  //xc1 err
+var5[L]$ = Wavelength;
+var5[U]$ = ;
+var5[C]$ = Peak Position 1 ERR;
+range var6 = [Book3]Sheet1!H;  //xc2
+var6[L]$ = Wavelength;
+var6[U]$ = nm;
+var6[C]$ = Peak Position 2; 
+range var7 = [Book3]Sheet1!I;  //xc2 err
+var7[L]$ = Wavelength;
+var7[U]$ = ;
+var7[C]$ = Peak Position 2 ERR;
+range var8 = [Book3]Sheet1!J;  //xc3
+var8[L]$ = Wavelength;
+var8[U]$ = nm;
+var8[C]$ = Peak Position 3; 
+range var9 = [Book3]Sheet1!K;  //xc3 err
+var9[L]$ = Wavelength;
+var9[U]$ = ;
+var9[C]$ = Peak Position 3 ERR; 
+range var10 = [Book3]Sheet1!L;  //w1 
+var10[L]$ = Wavelength;
+var10[U]$ = nm;
+var10[C]$ = Peak Width 1; 
+range var11 = [Book3]Sheet1!M;  //w1 err
+var11[L]$ = Wavelength;
+var11[U]$ = nm;
+var11[C]$ = Peak Width 1 ERR; 
+range var12 = [Book3]Sheet1!N;  //w2
+var12[L]$ = Wavelength;
+var12[U]$ = nm;
+var12[C]$ = Peak Width 2; 
+range var13 = [Book3]Sheet1!O;  //w2 err
+var13[L]$ = Wavelength;
+var13[U]$ = nm;
+var13[C]$ = Peak Width 2 ERR; 
+range var14 = [Book3]Sheet1!P;  //w3
+var14[L]$ = Wavelength;
+var14[U]$ = nm;
+var14[C]$ = Peak Width 3; 
+range var15 = [Book3]Sheet1!Q;  //w3 err
+var15[L]$ = Wavelength;
+var15[U]$ = nm;
+var15[C]$ = Peak Width 3 ERR; 
+range var16 = [Book3]Sheet1!R;  //h1
+var16[L]$ = Height;
+var16[U]$ = Count;
+var16[C]$ = Peak Height 1; 
+range var17 = [Book3]Sheet1!S;  //h1 err
+var17[L]$ = Height;
+var17[U]$ = Count;
+var17[C]$ = Peak Height 1 ERR;
+range var18 = [Book3]Sheet1!T;  //h2
+var18[L]$ = Height;
+var18[U]$ = Count;
+var18[C]$ = Peak Height 2; 
+range var19 = [Book3]Sheet1!U;  //h2 err
+var19[L]$ = Height;
+var19[U]$ = Count;
+var19[C]$ = Peak Height 2 ERR;
+range var20 = [Book3]Sheet1!V;  //h3
+var20[L]$ = Height;
+var20[U]$ = Count;
+var20[C]$ = Peak Height 3; 
+range var21 = [Book3]Sheet1!W;  //h3 err
+var21[L]$ = Height;
+var21[U]$ = Count;
+var21[C]$ = Peak Height 3 ERR; 
+
+int counter =1;
+loop(sheetnum,1,totSheets)   // 1 to N sheets of raw data, sheet name is temp related
+{
+string currentdatasheet$ = datasheets.GetAt(sheetnum)$; // this grabs the right sheet
+loop(m,1,runsPer)
+{
+string currentdatacol$ = datacols.GetAt(m)$;  // now we grab the actual column of PMT count data
+string currentwavecol$ = wavecols.GetAt(m)$;  // now we grab the actual column of wavelength data
+range rY = [Book1]currentdatasheet$!col(currentdatacol$); 
+range rX = [Book1]currentdatasheet$!col(currentwavecol$);
+
+nlbegin iy:=(rX,rY) func:=PeryleneTriple nltree:=ParamTree;
+nlfit;
+//type Baseline y0 is $(ParamTree.y0),; 
+//type Peak1: Center is $(ParamTree.xc1, %3.2f), Peak width (FWHM) is $(ParamTree.w1, %3.2f), Peak area (A) is $(ParamTree.A1, %3.0f); 
+//type Peak2: Center is $(ParamTree.xc2, %3.2f), Peak width (FWHM) is $(ParamTree.w2, %3.2f), Peak area (A) is $(ParamTree.A2, %3.0f); 
+//type Peak3: Center is $(ParamTree.xc3, %3.2f), Peak width (FWHM) is $(ParamTree.w3, %3.2f), Peak area (A) is $(ParamTree.A3, %3.0f); 
+//type ParamTree.=;
+string strTemp$ = datatemps.GetAt(sheetnum)$;
+int temp = %(strTemp$);
+var1[counter] = temp;
+var2[counter] = ParamTree.y0;
+var3[counter] = ParamTree.e_y0;
+var4[counter] = ParamTree.xc1;
+var5[counter] = ParamTree.e_xc1;
+var6[counter] = ParamTree.xc2;
+var7[counter] = ParamTree.e_xc2;
+var8[counter] = ParamTree.xc3;
+var9[counter] = ParamTree.e_xc3;
+var10[counter] = ParamTree.w1;
+var11[counter] = ParamTree.e_w1;
+var12[counter] = ParamTree.w2;
+var13[counter] = ParamTree.e_w2;
+var14[counter] = ParamTree.w3;
+var15[counter] = ParamTree.e_w3;
+var16[counter] = ParamTree.Height1;
+var17[counter] = ParamTree.edp_Height1;
+var18[counter] = ParamTree.Height2;
+var19[counter] = ParamTree.edp_Height2;
+var20[counter] = ParamTree.Height3;
+var21[counter] = ParamTree.edp_Height3;
+//var[counter] = ParamTree.;
+nlend;
+counter +=1;
+}
+}
+
+/*
+// lastly we will extract the Ratio Vs Temp graph for each
+range sliceTemp = [Book2]Sheet1!C; 
+range sliceR2 = [Book2]Sheet1!D;     // the data
+range sliceR2fit = [Book2]Sheet1!E;  // the associated linear fit
+range sliceB = [Book2]Sheet1!F;      // the data
+range sliceBfit = [Book2]Sheet1!G;   // the associated fit
+string ratioR2 = Ratio of $(BestRNumer+startWaveLen) / $(BestRDenom+startWaveLen);
+string ratioB = Ratio of $(BestBNumer+startWaveLen) / $(BestBDenom+startWaveLen);
+sliceTemp[L]$ = Temperature;
+sliceR2[L]$ = ratioR2$;
+sliceB[L]$ = ratioB$;
+sliceR2fit[L]$ = ratioR2$;
+sliceBfit[L]$ = ratioB$;
+sliceTemp[U]$ = "C";
+//sliceR2[U]$ = "";
+//sliceB[U]$ = "";
+//sliceWLen[C]$ = "";
+sliceR2[C]$ = $(BestRNumer+startWaveLen) / $(BestRDenom+startWaveLen) : best R^2: $(BestR2val,%5f) w/ $(BestRslop,%5f) Slope;
+sliceB[C]$ = $(BestBNumer+startWaveLen) / $(BestBDenom+startWaveLen) : best Slope: $(BestBval,%5f) w/ $(BestBfit,%5f) R2;
+sliceR2fit[C]$ = Fit line for R2;
+sliceBfit[C]$ = Fit line for Slope;
+int counter = 1;
+loop(sheetnum,1,totSheets)
+{
+string currentdatasheet$ = datasheets.GetAt(sheetnum)$;
+string strTemp$ = datatemps.GetAt(sheetnum)$;
+int temp = %(strTemp$);
+
+loop(m,1,runsPer)
+{
+range mn = [MBook1]currentdatasheet$!$(m);
+sliceTemp[counter] = temp;
+sliceR2[counter] = mn[BestRNumer,BestRDenom];
+sliceR2fit[counter] = (temp)*BestRslop+BestRint;
+sliceB[counter] = mn[BestBNumer,BestBDenom];
+sliceBfit[counter] = (temp)*BestBval+BestBint;
+counter = counter+1;
+}
+}*/

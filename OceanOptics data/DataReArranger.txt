@@ -1,8 +1,8 @@
 // This script comes from '9-20 cold box\UNTITLED.opj' 
 //  it just rearranges OceanOptics CCD UV-Vis data to a more workable format 
-//  
-//  this served as a test script for a longer version i ran later
-//  
+//  to work on a subset
+//  this served as a test script for python script i wrote to do similar stuff
+//  but better
 //  
 
 
