@@ -1,0 +1,56 @@
+// This script comes from 'oceanview\Untitled(2).opju' 
+//  
+//  this takes the VERY dense input data
+//  and bins it into 1 nm bins, since that what
+//  the original program was written for.
+//  
+//  
+
+
+
+string shtname$ = wagnp1inbox;
+string bkname$ = wagnp1inboxFL; 
+
+range XaxisInput = [bkname$]Sheet1!A;
+range indatabg = [bkname$]Sheet2!C;
+range outXMean = [bkname$]Sheet3!A;
+
+int numcols = 1058;                                                   //SET TO SMALL NUMBER TO TEST FAST
+
+int totRows = XaxisInput.nRows;
+int Ncounter = 0;
+double xOffset = 0.5;
+double subrangeLength = 1;            // space between subsets
+double subrangeEnd = $(XaxisInput[1]) + subrangeLength; // expected ending temperature
+int outRowPos = 1;
+loop(jj , 1 ,totRows)
+{
+if ( $(XaxisInput[jj]) > subrangeEnd )
+{
+
+loop(coli,1, numcols)  
+{
+int coljinY = coli+1;;
+int coljY = coli+1;
+
+range YaxisInput = [bkname$]Sheet1!$(coljinY);
+range outYMean = [bkname$]Sheet3!$(coljY);
+
+range Tmp2 = YaxisInput[jj-Ncounter:jj]; 
+outYMean[outRowPos] = Mean(Tmp2)-indatabg[outRowPos];
+outYMean[C]$ = YaxisInput[C]$;
+outYMean[L]$ = YaxisInput[L]$;
+outYMean[U]$ = YaxisInput[U]$;
+
+}
+range Tmp1 = XaxisInput[jj-Ncounter:jj]; 
+outXMean[outRowPos] = Mean(Tmp1)+xOffset;
+subrangeEnd = subrangeEnd + subrangeLength; 
+outRowPos++;
+Ncounter = 1;
+}
+Ncounter++;
+}
+outXMean[C]$ = XaxisInput[C]$;
+outXMean[L]$ = XaxisInput[L]$;
+outXMean[U]$ = XaxisInput[U]$;

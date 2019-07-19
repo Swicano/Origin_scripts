@@ -1,0 +1,164 @@
+// This script comes from 'oceanview\Untitled(2).opju' 
+//  
+// it is the final variation of the data matrix thing,
+// it replaces the simple regression with Deming Regression
+//
+//  it does a lot less. having already generated the previous data
+//  it takes an external sheet with requirements (min,max wavelength,R,slope,etc)
+//  and finds the wavelength pair that maximizes slope, or R^2, or if we want to 
+//  look at one specific wavelength pair. it extracts that data into a traditional 
+//  spreadsheet two column (temperature vs ratio) sheet, and plots the data as well
+//  as the associated fit
+
+
+
+
+// when starting, set these values lower 
+// than the final value to speed up test runs
+
+double Vary = 2;     //sigma squared
+double Varx = 1;
+double ratioV = Vary/Varx;    // equals the variance in Y divided by the variance in X
+int runsPer = 5;  	  // number of datasets (x,y pairs) in each datasheet, or: how many columns of Y data
+int totSheets = 7;	  //35 // total number of sheets of data 35
+int dataLength = 684;  //3648	// how many rows of Y data on each sheet
+int dataStartRow = 1; // usually 1 but in case you want to skip some early data like saya  filter
+int offsetX = 4;   // where you start your array, default is 1 ( in the resulting matrix, the X direction is top to bottom (aka X offset is ROW offset))
+int offsetY = 3;   //where you start your array, default is 1
+int dataSkip = 4;  // default is 1 for no skip
+
+// these values don't affect the calculation time
+// but are used to label the graphs correctly 
+int startWaveLen = 346;
+int endWaveLen = 1030;
+
+int i=1;
+int j=1;
+
+stringarray datasheets;           // the sheet name of the input sheets, each temperature
+datasheets.Add("22C"); //1   // gets its own sheet and all sheets need the same number of runs,
+datasheets.Add("33C");       // so add more at the end as needed.
+datasheets.Add("50CC");       // these numbers just help keep track of the total sheets
+datasheets.Add("60C");
+datasheets.Add("70C"); //5
+datasheets.Add("22C-2"); 
+datasheets.Add("42C-2");
+//datasheets.Add("22C");
+//datasheets.Add("29C");
+//datasheets.Add("39C"); //10
+//datasheets.Add("45C1"); 
+//datasheets.Add("48C");
+//datasheets.Add("68C");
+//datasheets.Add("75C");
+//datasheets.Add("88C"); //15
+//datasheets.Add("102C1"); 
+//datasheets.Add("125C");
+//datasheets.Add("143C");
+//datasheets.Add("C");
+//datasheets.Add("C"); //20
+//datasheets.Add("s3 75C"); 
+//datasheets.Add("s3 100C");
+//datasheets.Add("s3 110C");
+//datasheets.Add("s3 120C");
+//datasheets.Add("s3 130C"); //25
+//datasheets.Add("s3 150C");
+//datasheets.Add("s4 20C");
+//datasheets.Add("s4 50C 1");
+//datasheets.Add("s4 50C 2");
+//datasheets.Add("s4 100C 1"); //30
+//datasheets.Add("s4 100C 2");
+//datasheets.Add("s4 150C 1");
+//datasheets.Add("s4 150C 2");
+//datasheets.Add("s4 200C 1");
+//datasheets.Add("s4 200C 2"); //35
+
+
+stringarray datatemps;
+datatemps.Add("22");//1     // the temperature associated with each sheet, 
+datatemps.Add("33");        // duplicates are OK, add more at the end as needed
+datatemps.Add("50");
+datatemps.Add("60");
+datatemps.Add("70");//5
+datatemps.Add("22");
+datatemps.Add("42");
+//datatemps.Add("22");
+//datatemps.Add("29");
+//datatemps.Add("39");//10
+//datatemps.Add("45");
+//datatemps.Add("48");
+//datatemps.Add("68");
+//datatemps.Add("75");
+//datatemps.Add("88");//15
+//datatemps.Add("102");
+//datatemps.Add("125");
+//datatemps.Add("143");
+//datatemps.Add("20");
+//datatemps.Add("50");//20
+//datatemps.Add("75");
+//datatemps.Add("100");
+//datatemps.Add("110");
+//datatemps.Add("120");
+//datatemps.Add("130"); //25
+//datatemps.Add("150");
+//datatemps.Add("20");
+//datatemps.Add("50");
+//datatemps.Add("50");
+//datatemps.Add("100"); //30
+//datatemps.Add("100");
+//datatemps.Add("150");
+//datatemps.Add("150");
+//datatemps.Add("200");
+//datatemps.Add("200"); //35
+
+
+stringarray datacols;     // This describes which columns in each sheet hold the Y data, 
+datacols.Add("AF");        // add more at the end as appropiate.
+datacols.Add("AG");
+datacols.Add("AH");
+datacols.Add("AI");
+datacols.Add("AJ");
+
+
+
+string linfit$ = "Fit2";
+range avgDev = [MBook1]linfit$!22;
+avgDev[1,1] = 0;
+avgDev.lname$ = "avg of StdDev at each temp";
+for(i=offsetX; i<dataLength; i+=dataSkip)
+{
+for(j=offsetY; j<dataLength; j+=dataSkip)
+{
+dataset abb = {1}; // loose dataset to hold all the values at one temperature
+abb.SetSize(totSheets);
+loop(sheetnum,1,totSheets)   // 1 to N sheets of raw data, sheet name is temp related
+{
+string currentdatasheet$ = datasheets.GetAt(sheetnum)$;
+dataset aa = {1}; // loose dataset to hold all the values at one temperature
+aa.SetSize(runsPer);
+loop(m,1,runsPer)
+{
+range mn = [MBook1]currentdatasheet$!$(m);
+aa[m] = mn[i,j];
+}
+range mn2 = [MBook1]currentdatasheet$!$(runsPer+1);
+mn2[i,j] = StdDev(aa);
+abb[sheetnum] = StdDev(aa);
+}
+avgDev[i,j] = Mean(abb);
+}}
+
+
+// this set of loops sets up the ratio matrices. so for each column in a sheet, it makes a matrix of ratios in a new msheet, no data checking here
+
+//
+//range mn = [MBook1]currentdatasheet$!$(m);
+//string currentcol$ = datacols.GetAt(m)$;
+//range r11c = [Book1]currentdatasheet$!col(currentcol$);
+//mn[1,1] = 1;
+//mdim ms:=currentdatasheet$ cols:=dataLength rows:=dataLength x1:=startWaveLen x2:=endWaveLen y1:=startWaveLen y2:=endWaveLen;
+
+//mn[i,j] = r11c[(i-1+ dataStartRow)]/r11c[(j-1+ dataStartRow)]; 
+//}
+//}
+//}
+//}

@@ -1,0 +1,374 @@
+// This script comes from 'oceanview\Untitled(2).opju' 
+//  
+// it is the final variation of the data matrix thing,
+// it replaces the simple regression with Deming Regression
+//
+//  it does a lot. 
+//first: takes a set of input data in the form wavelength vs fluorescence
+//     count at many different temperatures, multiple runs per temperature
+//  for each temperature it makes a sheet consisting of a matrix for each 
+//  wavelength vs fluorescence dataset, where the[i,j]-th value is the  
+//  ratio of the fluorescence value at two different wavelengths i and j.  
+//
+//second: it then takes this 3d matrix of ratio values at i-wavelength, 
+//  j wavelength, and k sample temperature, and fits a line to each with
+//  temperature as the independent axis. it does this by following the steps
+//  outlined in the wikipedia page for simple linear regression
+//  with a minor addition to deal with missing data
+//  outputing a matrix for each of A, B, R, and R^2 
+
+// when starting, set these values lower 
+// than the final value to speed up test runs
+
+double Vary = 1^2;     //sigma squared placeholder, we vary this one
+double Varx = 2^2;	// temperature variance
+double ratioV = Vary/Varx;    // equals the variance in Y divided by the variance in X
+int runsPer = 5;  	  // number of datasets (x,y pairs) in each datasheet, or: how many columns of Y data
+int totSheets = 7;	  //35 // total number of sheets of data 35
+int dataLength = 684;  //684	// how many rows of Y data on each sheet
+int dataStartRow = 1; // usually 1 but in case you want to skip some early data like saya  filter
+int offsetX = 1;   // where you start your array, default is 1 ( in the resulting matrix, the X direction is top to bottom (aka X offset is ROW offset))
+int offsetY = 1;   //where you start your array, default is 1
+int dataSkip = 2;  // default is 1 for no skip
+
+// these values don't affect the calculation time
+// but are used to label the graphs correctly 
+int startWaveLen = 346;
+int endWaveLen = 1030;
+
+int i=1;
+int j=1;
+
+stringarray datasheets;           // the sheet name of the input sheets, each temperature
+datasheets.Add("22C"); //1   // gets its own sheet and all sheets need the same number of runs,
+datasheets.Add("33C");       // so add more at the end as needed.
+datasheets.Add("50CC");       // these numbers just help keep track of the total sheets
+datasheets.Add("60C");
+datasheets.Add("70C"); //5
+datasheets.Add("22C-2"); 
+datasheets.Add("42C-2");
+//datasheets.Add("22C");
+//datasheets.Add("29C");
+//datasheets.Add("39C"); //10
+//datasheets.Add("45C1"); 
+//datasheets.Add("48C");
+//datasheets.Add("68C");
+//datasheets.Add("75C");
+//datasheets.Add("88C"); //15
+//datasheets.Add("102C1"); 
+//datasheets.Add("125C");
+//datasheets.Add("143C");
+//datasheets.Add("C");
+//datasheets.Add("C"); //20
+//datasheets.Add("s3 75C"); 
+//datasheets.Add("s3 100C");
+//datasheets.Add("s3 110C");
+//datasheets.Add("s3 120C");
+//datasheets.Add("s3 130C"); //25
+//datasheets.Add("s3 150C");
+//datasheets.Add("s4 20C");
+//datasheets.Add("s4 50C 1");
+//datasheets.Add("s4 50C 2");
+//datasheets.Add("s4 100C 1"); //30
+//datasheets.Add("s4 100C 2");
+//datasheets.Add("s4 150C 1");
+//datasheets.Add("s4 150C 2");
+//datasheets.Add("s4 200C 1");
+//datasheets.Add("s4 200C 2"); //35
+
+
+stringarray datatemps;
+datatemps.Add("22");//1     // the temperature associated with each sheet, 
+datatemps.Add("33");        // duplicates are OK, add more at the end as needed
+datatemps.Add("50");
+datatemps.Add("60");
+datatemps.Add("70");//5
+datatemps.Add("22");
+datatemps.Add("42");
+//datatemps.Add("22");
+//datatemps.Add("29");
+//datatemps.Add("39");//10
+//datatemps.Add("45");
+//datatemps.Add("48");
+//datatemps.Add("68");
+//datatemps.Add("75");
+//datatemps.Add("88");//15
+//datatemps.Add("102");
+//datatemps.Add("125");
+//datatemps.Add("143");
+//datatemps.Add("20");
+//datatemps.Add("50");//20
+//datatemps.Add("75");
+//datatemps.Add("100");
+//datatemps.Add("110");
+//datatemps.Add("120");
+//datatemps.Add("130"); //25
+//datatemps.Add("150");
+//datatemps.Add("20");
+//datatemps.Add("50");
+//datatemps.Add("50");
+//datatemps.Add("100"); //30
+//datatemps.Add("100");
+//datatemps.Add("150");
+//datatemps.Add("150");
+//datatemps.Add("200");
+//datatemps.Add("200"); //35
+
+
+stringarray datacols;     // This describes which columns in each sheet hold the Y data, 
+datacols.Add("AF");        // add more at the end as appropiate.
+datacols.Add("AG");
+datacols.Add("AH");
+datacols.Add("AI");
+datacols.Add("AJ");
+
+ 
+// this set of loops sets up the ratio matrices. so for each column in a sheet, it makes a matrix of ratios in a new msheet, no data checking here
+//loop(sheetnum,1,totSheets)   // 1 to N sheets of raw data, sheet name is temp related
+//{
+//string currentdatasheet$ = datasheets.GetAt(sheetnum)$;
+//
+//loop(m,1,runsPer)
+//{
+//
+//range mn = [MBook1]currentdatasheet$!$(m);
+//string currentcol$ = datacols.GetAt(m)$;
+//range r11c = [Book1]currentdatasheet$!col(currentcol$);
+//mn[1,1] = 1;
+//mdim ms:=currentdatasheet$ cols:=dataLength rows:=dataLength x1:=startWaveLen x2:=endWaveLen y1:=startWaveLen y2:=endWaveLen;
+//for(i=offsetX; i<dataLength; i+=dataSkip)
+//{
+//for(j=offsetY; j<dataLength; j+=dataSkip)
+//{
+//mn[i,j] = r11c[(i-1+ dataStartRow)]/r11c[(j-1+ dataStartRow)]; 
+//}
+//}
+//}
+//}
+
+
+// now we get ready to do the heavy lifting by setting some things up, first define a series of arrays to put our output into
+string linfit$ = "Fit2";
+range fitA = [MBook1]linfit$!1;
+range fitB = [MBook1]linfit$!2;
+range fitR = [MBook1]linfit$!3;
+range fitR2 = [MBook1]linfit$!4;
+range sumxx = [MBook1]linfit$!5;
+range sumxy = [MBook1]linfit$!6;
+range sumx = [MBook1]linfit$!7;
+range sumy = [MBook1]linfit$!8;
+range xbar = [MBook1]linfit$!9;
+range ybar = [MBook1]linfit$!10;
+range xdev = [MBook1]linfit$!11;
+range xydev = [MBook1]linfit$!12;
+range xxdev = [MBook1]linfit$!13;
+range yydev = [MBook1]linfit$!14;
+range goodpoints = [MBook1]linfit$!15; // to keep track of how many points we used in each position?
+range MSE = [MBook1]linfit$!16; // to keep track of how many points we used in each position?
+range Sxx = [MBook1]linfit$!17;
+range Sxy = [MBook1]linfit$!18;
+range Syy = [MBook1]linfit$!19;
+range xstar = [MBook1]linfit$!20;
+range SSR = [MBook1]linfit$!21;
+range avgDev = [MBook1]linfit$!22;
+range TempDev = [MBook1]linfit$!24;
+range TempRes = [MBook1]linfit$!25;
+range TempERR = [MBook1]linfit$!26;
+
+fitA[1,1] = 1;
+fitB[1,1] = 1;
+fitR[1,1] = 1;
+fitR2[1,1] = 1;
+sumxx[1,1] = 1;
+sumxy[1,1] = 1;
+sumx[1,1] = 1;
+sumy[1,1] = 1;
+xbar[1,1] = 1;
+ybar[1,1] = 1;
+xdev[1,1] = 1;
+xydev[1,1] = 1;
+xxdev[1,1] = 1;
+yydev[1,1] = 1;
+goodpoints[1,1] = 1;
+MSE[1,1] = 1;
+Sxx[1,1] = 1;
+Sxy[1,1] = 1;
+Syy[1,1] = 1;
+xstar[1,1] = 1;
+SSR[1,1] = 1;
+TempDev[1,1] = 1;
+TempRes[1,1] = 1;
+TempERR[1,1] = 1;
+
+fitA.lname$ = "A, intercept, Fit Parameter";
+fitB.lname$ = "B, slope, Fit Parameter ";
+fitR.lname$ = "Fit goodness R ";
+fitR2.lname$ = " R^2, Fit Goodness ";
+sumxx.lname$ = "Sum(x^2), internal";
+sumxy.lname$ = "Sum(x*y), internal";
+sumx.lname$ = "Sum(x), internal";
+sumy.lname$ = "Sum(y), internal";
+xbar.lname$ = "avg X, internal to R";
+ybar.lname$ = "avg Y, internal to R";
+xdev.lname$ = "X deviation, internal to R";
+xydev.lname$ = "X*Y deviation, internal to R ";
+xxdev.lname$ = "X^2 deviation, internal to R ";
+yydev.lname$ = "Y^2 deviation, internal to R ";
+goodpoints.lname$ = "number of points used of total (to account for bad data points)";
+MSE.lname$ = "mean squared error";
+Sxx.lname$ = "second moment xx";
+Sxy.lname$ = "second moment xy";
+Syy.lname$ = "second moment yy";
+xstar.lname$ = "xstarhat";
+SSR.lname$ = "weighted sum of squared residuals";
+TempDev.lname$ = "STD component of sum of temperature error squared";
+TempRes.lname$ = "Residual component of sum of temperature error squared";
+TempERR.lname$ = "sum of temperature error squared";
+//Sxx
+//Sxy
+//Syy
+//xstar
+//SSR
+
+mdim ms:=linfit$ cols:=dataLength rows:=dataLength x1:=startWaveLen x2:=endWaveLen y1:=startWaveLen y2:=endWaveLen;
+
+// ok here we go through and initialize all the matrices to 0
+for(i=offsetX; i<dataLength; i+=dataSkip) // number of rows per data run
+{
+for(j=offsetY; j<dataLength; j+=dataSkip) // number of columns per data run
+{
+sumxx[i,j] = 0;
+sumxy[i,j] = 0;
+sumx[i,j] = 0;
+sumy[i,j] = 0;
+xbar[i,j] = 0;
+ybar[i,j] = 0;
+xdev[i,j] = 0;
+xydev[i,j] = 0;
+xxdev[i,j] = 0;
+yydev[i,j] = 0;
+goodpoints[i,j] = 0;
+MSE[i,j] = 0;
+Sxx[i,j] = 0;
+Sxy[i,j] = 0;
+Syy[i,j] = 0;
+xstar[i,j] = 0;
+SSR[i,j] = 0;
+TempDev[i,j] = 0;
+TempRes[i,j] = 0;
+TempERR[i,j] = 0;
+}
+}
+
+// now we start the heavy lifting, this loop-struct runs over EACH matrix and calculates the 6 value matrices at the bottom
+// here is the first place where a 0 or undefined value start to give us actual trouble
+// another problem is that we code N in as the same for all sets, lets fix that first by removing the need using the goodpoints matrix
+// we need a test for a bad data point that works with this programming style, i think we just need to find NaN's for now, use function ISNA()
+
+//int N = totSheets*runsPer; // total number of data points per linear regression (sheets * runs per sheet)
+loop(sheetnum,1,totSheets) // number of different sheets you have
+{
+string currentdatasheet$ = datasheets.GetAt(sheetnum)$;
+string strTemp$ = datatemps.GetAt(sheetnum)$;
+int temp = %(strTemp$);
+loop(m,1,runsPer)         // number of runs per sheet
+{
+range mn = [MBook1]currentdatasheet$!$(m);
+for(i=offsetX; i<dataLength; i+=dataSkip) // number of rows per data run
+{
+for(j=offsetY; j<dataLength; j+=dataSkip) // number of columns per data run
+{
+if (!ISNA(mn[i,j]*temp)) // simply say if the datapoint we're about to play with is undefined, just skip it! we'll fix the statistics later
+{
+sumxx[i,j] = sumxx[i,j] + temp^2;
+sumxy[i,j] = sumxy[i,j] + temp*mn[i,j];
+sumx[i,j] = sumx[i,j] + temp;
+sumy[i,j] = sumy[i,j] + mn[i,j]; 
+xbar[i,j] = xbar[i,j] + temp; // needs to be divided by N
+ybar[i,j] = ybar[i,j] + mn[i,j]; // needs to be divided by N
+goodpoints[i,j] = goodpoints[i,j] +1; 
+}
+}
+}
+}
+}
+// here we fix those statistics that broke
+for(i=offsetX; i<dataLength; i+=dataSkip) // number of rows per data run
+{
+for(j=offsetY; j<dataLength; j+=dataSkip) // number of columns per data run
+{
+xbar[i,j] = xbar[i,j]/goodpoints[i,j];
+ybar[i,j] = ybar[i,j]/goodpoints[i,j];
+}
+}
+
+loop(sheetnum,1,totSheets) // again the number of sheets you have
+{
+string currentdatasheet$ = datasheets.GetAt(sheetnum)$;
+string strTemp$ = datatemps.GetAt(sheetnum)$;
+int temp = %(strTemp$);
+loop(m,1,runsPer) //runs per sheet 
+{
+range mn = [MBook1]currentdatasheet$!$(m);
+for(i=offsetX; i<dataLength; i+=dataSkip) // number of rows per data run
+{
+for(j=offsetY; j<dataLength; j+=dataSkip) // number of rows per data run
+{
+if (!ISNA(mn[i,j]*temp)) // simply say if the datapoint we're about to play with is undefined, just skip it! since we already fixed the stats, this should work perfectly
+{
+xdev[i,j]  = xdev[i,j] + (temp - xbar[i,j]);
+xydev[i,j] = xydev[i,j] + (mn[i,j] - ybar[i,j])*(temp - xbar[i,j]);
+xxdev[i,j] = xxdev[i,j] + (temp - xbar[i,j])^2;
+yydev[i,j] = yydev[i,j] + (mn[i,j] - ybar[i,j])^2;
+Sxx[i,j] = Sxx[i,j] + 1/(goodpoints[i,j]-1)*(temp - xbar[i,j])^2;
+Sxy[i,j] = Sxy[i,j] + 1/(goodpoints[i,j]-1)*(mn[i,j] - ybar[i,j])*(temp - xbar[i,j]);
+Syy[i,j] = Syy[i,j] + 1/(goodpoints[i,j]-1)*(mn[i,j] - ybar[i,j])^2;
+
+}
+}
+}
+}
+}
+
+
+// this should require no change other than subbing all mentions of N with "goodpoints[i,j]"
+for(i=offsetX; i<dataLength; i+=dataSkip)// number of rows per data run
+{
+for(j=offsetY; j<dataLength; j+=dataSkip) // number of rows per data run
+{
+Vary = avgDev[i,j]^2;
+ratioV = Vary^2/Varx^2;
+fitB[i,j]=(Syy[i,j]-ratioV*Sxx[i,j]+sqrt((Syy[i,j]-ratioV*Sxx[i,j])^2+4*ratioV*Sxy[i,j]^2))/(2*Sxy[i,j]);
+fitA[i,j]=ybar[i,j]-fitB[i,j]*xbar[i,j];
+fitR[i,j] = xydev[i,j]/(sqrt(xxdev[i,j])*sqrt(yydev[i,j]));
+fitR2[i,j] = fitR[i,j]^2;
+}
+}
+
+loop(sheetnum,1,totSheets) // last time we need to loop over everything i swear
+{
+string currentdatasheet$ = datasheets.GetAt(sheetnum)$;
+string strTemp$ = datatemps.GetAt(sheetnum)$;
+int temp = %(strTemp$);
+loop(m,1,runsPer) //runs per sheet 
+{
+range mn = [MBook1]currentdatasheet$!$(m);
+for(i=offsetX; i<dataLength; i+=dataSkip) // number of rows per data run
+{
+for(j=offsetY; j<dataLength; j+=dataSkip) // number of rows per data run
+{
+if (!ISNA(mn[i,j]*temp)) // simply say if the datapoint we're about to play with is undefined, just skip it! since we already fixed the stats, this should work perfectly
+{
+Vary = avgDev[i,j]^2;
+ratioV = Vary/Varx;
+xstar[i,j] = temp+(fitB[i,j]/(fitB[i,j]^2+ratioV))*(mn[i,j]-fitA[i,j]-fitB[i,j]*temp);
+MSE[i,j] = MSE[i,j]+(1/(goodpoints[i,j]-2))*(temp - (mn[i,j]*fitB[i,j]+fitA[i,j]))^2;
+SSR[i,j] = SSR[i,j] + 1/Vary^2*((mn[i,j]-fitA[i,j]-fitB[i,j]*xstar[i,j])^2+ratioV*(temp-xstar[i,j])^2);
+TempDev[i,j] = TempDev[i,j] + Vary/fitB[i,j]^2 + Varx;
+TempRes[i,j] = TempRes[i,j] + (mn[i,j]-fitA[i,j]-fitB[i,j]*xstar[i,j])^2/fitB[i,j]^2 + (temp-xstar[i,j])^2;
+TempERR[i,j] = TempERR[i,j] + Varx + (temp-xstar[i,j])^2 + 1/fitB[i,j]^2 *(Vary + (mn[i,j]-fitA[i,j]-fitB[i,j]*xstar[i,j])^2);
+}
+}
+}
+}
+}

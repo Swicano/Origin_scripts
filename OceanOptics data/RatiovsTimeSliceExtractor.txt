@@ -1,0 +1,38 @@
+// This script comes from 'oceanview\Untitled(2).opju' 
+//  it extracts a chosen ratio data from the raw data to 
+//  plot ratio vs time
+//
+//
+//
+
+
+
+
+
+string shtnameout$ = temperaturedata;
+string shtnamein$ = Sheet3;
+string bkname$ = wagnp1inboxFL; 
+
+range indata = [bkname$]shtnameout$!A;
+int innum = indata[1]-345;
+int inden = indata[2]-345;
+double inint = indata[3];
+double inslope = indata[4];
+range outdata = [bkname$]shtnameout$!D;
+outdata[C]$ = AgNP-LDPE-0.0005 wt% lumoj in BBjR;
+outdata[L]$ = fluorescence ratio;
+outdata[U]$ = "";
+
+range outtemp = [bkname$]shtnameout$!E;
+outtemp[C]$ = AgNP-LDPE-0.0005 wt% lumoj in BBjR;
+outtemp[L]$ = Temperature;
+outtemp[U]$ = C;
+
+int numcols =  1057;
+loop(coli,1, numcols)  
+{
+int coljinY = coli+1;
+range YaxisInput = [bkname$]shtnamein$!$(coljinY);
+outdata[coli] = YaxisInput[innum]/YaxisInput[inden];
+outtemp[coli] = (YaxisInput[innum]/YaxisInput[inden]-inint)/inslope;
+}

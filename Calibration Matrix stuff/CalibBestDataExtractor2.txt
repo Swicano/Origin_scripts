@@ -1,0 +1,279 @@
+// This script comes from 'oceanview\Untitled(2).opju' 
+//  
+// it is the final variation of the data matrix thing,
+// it replaces the simple regression with Deming Regression
+//
+//  it does a lot less. having already generated the previous data
+//  it takes an external sheet with requirements (min,max wavelength,R,slope,etc)
+//  and finds the wavelength pair that maximizes slope, or R^2, or if we want to 
+//  look at one specific wavelength pair. it extracts that data into a traditional 
+//  spreadsheet two column (temperature vs ratio) sheet, and plots the data as well
+//  as the associated fit
+
+
+
+
+// when starting, set these values lower 
+// than the final value to speed up test runs
+
+int runsPer = 5;  	  // number of datasets (x,y pairs) in each datasheet, or: how many columns of Y data
+int totSheets = 7;	  //35 // total number of sheets of data 35
+int dataLength = 684;//1550;  //3648	// how many rows of Y data on each sheet
+int dataStartRow = 1; // usually 1 but in case you want to skip some early data like saya  filter
+int offsetX = 1;   // where you start your array, default is 1 ( in the resulting matrix, the X direction is top to bottom (aka X offset is ROW offset))
+int offsetY = 1;   //where you start your array, default is 1
+int dataSkip = 1;  // default is 1 for no skip
+
+// these values don't affect the calculation time
+// but are used to label the graphs correctly 
+int startWaveLen = 346;
+int endWaveLen = 1030; 
+
+range inputWaves = [Book3]Sheet1!col(N);
+
+
+stringarray datasheets;           // the sheet name of the input sheets, each temperature
+datasheets.Add("22C"); //1   // gets its own sheet and all sheets need the same number of runs,
+datasheets.Add("33C");       // so add more at the end as needed.
+datasheets.Add("50CC");       // these numbers just help keep track of the total sheets
+datasheets.Add("60C");
+datasheets.Add("70C"); //5
+datasheets.Add("22C-2"); 
+datasheets.Add("42C-2");
+//datasheets.Add("22C");
+//datasheets.Add("29C");
+//datasheets.Add("39C"); //10
+//datasheets.Add("45C1"); 
+//datasheets.Add("48C");
+//datasheets.Add("68C");
+//datasheets.Add("75C");
+//datasheets.Add("88C"); //15
+//datasheets.Add("102C1"); 
+//datasheets.Add("125C");
+//datasheets.Add("143C");
+//datasheets.Add("C");
+//datasheets.Add("C"); //20
+//datasheets.Add("s3 75C"); 
+//datasheets.Add("s3 100C");
+//datasheets.Add("s3 110C");
+//datasheets.Add("s3 120C");
+//datasheets.Add("s3 130C"); //25
+//datasheets.Add("s3 150C");
+//datasheets.Add("s4 20C");
+//datasheets.Add("s4 50C 1");
+//datasheets.Add("s4 50C 2");
+//datasheets.Add("s4 100C 1"); //30
+//datasheets.Add("s4 100C 2");
+//datasheets.Add("s4 150C 1");
+//datasheets.Add("s4 150C 2");
+//datasheets.Add("s4 200C 1");
+//datasheets.Add("s4 200C 2"); //35
+
+
+stringarray datatemps;
+datatemps.Add("22");//1     // the temperature associated with each sheet, 
+datatemps.Add("33");        // duplicates are OK, add more at the end as needed
+datatemps.Add("50");
+datatemps.Add("60");
+datatemps.Add("70");//5
+datatemps.Add("22");
+datatemps.Add("42");
+//datatemps.Add("22");
+//datatemps.Add("29");
+//datatemps.Add("39");//10
+//datatemps.Add("45");
+//datatemps.Add("48");
+//datatemps.Add("68");
+//datatemps.Add("75");
+//datatemps.Add("88");//15
+//datatemps.Add("102");
+//datatemps.Add("125");
+//datatemps.Add("143");
+//datatemps.Add("20");
+//datatemps.Add("50");//20
+//datatemps.Add("75");
+//datatemps.Add("100");
+//datatemps.Add("110");
+//datatemps.Add("120");
+//datatemps.Add("130"); //25
+//datatemps.Add("150");
+//datatemps.Add("20");
+//datatemps.Add("50");
+//datatemps.Add("50");
+//datatemps.Add("100"); //30
+//datatemps.Add("100");
+//datatemps.Add("150");
+//datatemps.Add("150");
+//datatemps.Add("200");
+//datatemps.Add("200"); //35
+
+
+stringarray datacols;     // This describes which columns in each sheet hold the Y data, 
+datacols.Add("AF");        // add more at the end as appropiate.
+datacols.Add("AG");
+datacols.Add("AH");
+datacols.Add("AI");
+datacols.Add("AJ");
+
+ 
+
+// heres our list of inputs that act as cutoffs
+range sliceReqs = [Book2]Sheet2!B; 
+double maxSSR = sliceReqs[1];
+double minB = sliceReqs[2];
+double minWL = sliceReqs[3]-startWaveLen;
+double maxWL = sliceReqs[4]-startWaveLen;
+int inNumer = sliceReqs[5]-dataStartRow;
+int inDenom = sliceReqs[6]-dataStartRow;
+double maxMSE = sliceReqs[7];
+
+// we want to loop over the R^2 Matrix and find the largest R^2, later we will add a set of restrictions as we see need for
+int    BestSSRNumer = 0;
+int    BestSSRDenom = 0;
+double BestSSRslop =  0;
+double BestSSRint =   0;
+double BestSSRSSR =   maxSSR;
+double BestSSRMSE =   0;
+// also we want to loop over slope matrix and find highest slope
+int    BestBNumer = 0;
+int    BestBDenom = 0;
+double BestBslop =  minB;
+double BestBint =   0;
+double BestBSSR =   0;
+double BestBMSE =   0;
+//ALSO we want to loop over MSE matrix and find lowest MSE
+int    BestMNumer = 0;
+int    BestMDenom = 0;
+double BestMslop =  0;
+double BestMint =   0;
+double BestMSSR =   0;
+double BestMMSE =   maxMSE;
+
+string linfit$ = "Fit2";
+range fitA = [MBook1]linfit$!1;
+range fitB = [MBook1]linfit$!2;
+range fitR = [MBook1]linfit$!3;
+range fitSSR = [MBook1]linfit$!21; // r2 (col4) is now actually WSSR (col(21))
+range sumxx = [MBook1]linfit$!5;
+range sumxy = [MBook1]linfit$!6;
+range sumx = [MBook1]linfit$!7;
+range sumy = [MBook1]linfit$!8;
+range xbar = [MBook1]linfit$!9;
+range ybar = [MBook1]linfit$!10;
+range xdev = [MBook1]linfit$!11;
+range xydev = [MBook1]linfit$!12;
+range xxdev = [MBook1]linfit$!13;
+range yydev = [MBook1]linfit$!14;
+range goodpoints = [MBook1]linfit$!15; // to keep track of how many points we used in each position?
+range MSE = [MBook1]linfit$!26;
+
+loop(ij,1,dataLength) // number of rows per data run
+{
+  loop(jj,1,dataLength) // number of rows per data run
+  {
+    if( (ij >minWL) & (jj >minWL) & (ij<maxWL) & (jj<maxWL) & (fitSSR[ij,jj] < maxSSR) & (fitB[ij,jj]>minB)& ( ij!=jj) )// here is where we would add other restrictions as necessary
+    {
+      if (fitSSR[ij,jj] < BestSSRSSR) // this IF is for the WSSR
+      {
+        BestSSRNumer = ij;
+        BestSSRDenom = jj; 
+        BestSSRslop =  fitB[ij,jj];
+        BestSSRint =   fitA[ij,jj];
+        BestSSRSSR =   fitSSR[ij,jj];
+        BestSSRMSE =   MSE[ij,jj];
+      }
+      if (abs(fitB[ij,jj]) > BestBslop) // this IF is for the B
+      {
+        BestBNumer =  ij;
+        BestBDenom =  jj; 
+        BestBslop =   fitB[ij,jj];
+        BestBint =    fitA[ij,jj];
+        BestBSSR =    fitSSR[ij,jj];
+        BestBMSE =    MSE[ij,jj];
+      }
+      if (abs(MSE[ij,jj]) < BestMMSE) // this IF is for the MSE
+      {
+        BestMNumer = ij;
+        BestMDenom = jj; 
+        BestMslop =  fitB[ij,jj];
+        BestMint =   fitA[ij,jj];
+        BestMSSR =   fitSSR[ij,jj];
+        BestMMSE =   MSE[ij,jj];
+      }
+    }
+  }
+}
+
+
+// lastly we will extract the Ratio Vs Temp graph for each
+range sliceTemp     = [Book2]Sheet2!C;      //
+range sliceSSR      = [Book2]Sheet2!D;     // the data
+range sliceSSRfit   = [Book2]Sheet2!E;    //  the associated linear fit
+range sliceB        = [Book2]Sheet2!F;   // / the data
+range sliceBfit     = [Book2]Sheet2!G;     // the associated fit
+range sliceChose    = [Book2]Sheet2!H;    //  the data
+range sliceChosefit = [Book2]Sheet2!I;   // / the associated fit
+range sliceMSE      = [Book2]Sheet2!J;     // the data
+range sliceMSEfit   = [Book2]Sheet2!K;    //  the associated fit
+
+
+string ratioSSR   = Ratio of $(BestSSRNumer) / $(BestSSRDenom);
+string ratioB     = Ratio of $(BestBNumer) / $(BestBDenom);
+string ratioChose = Ratio of $(inNumer) / $(inDenom);
+string ratioMSE   = Ratio of $(BestMNumer) / $(BestMDenom);
+
+sliceTemp[L]$     = Temperature;
+sliceSSR[L]$      = ratioSSR$;
+sliceSSRfit[L]$   = ratioSSR$;
+sliceB[L]$        = ratioB$;
+sliceBfit[L]$     = ratioB$;
+sliceChose[L]$    = ratioChose$;
+sliceChosefit[L]$ = ratioChose$;
+sliceMSE[L]$      = ratioMSE$;
+sliceMSEfit[L]$   = ratioMSE$;
+
+sliceTemp[U]$ = "C";
+//sliceSSR[U]$ = "";
+//sliceB[U]$ = "";
+//sliceWLen[C]$ = "";
+
+sliceSSR[C]$      = SSR $(inputWaves[BestSSRNumer+dataStartRow],%3f) / $(inputWaves[BestSSRDenom+dataStartRow],%3f) : SSR: $(BestSSRSSR,%5f) Slope: $(BestSSRslop,%5f) MSE: $(BestSSRMSE,%5f);
+sliceSSRfit[C]$   = Fit line for SSR;
+sliceB[C]$        = Slope $(inputWaves[BestBNumer+dataStartRow],%3f) / $(inputWaves[BestBDenom+dataStartRow],%3f) : SSR: $(BestBSSR,%5f) Slope: $(BestBslop,%5f) MSE: $(BestBMSE,%5f);
+sliceBfit[C]$     = Fit line for Slope;
+sliceChose[C]$    = Choice $(inputWaves[inNumer+dataStartRow],%3f) / $(inputWaves[inDenom+dataStartRow],%3f) :User Choice;
+sliceChosefit[C]$ = Fit line for User Choice;
+sliceMSE[C]$      = MSE $(inputWaves[BestMNumer+dataStartRow],%3f) / $(inputWaves[BestMDenom+dataStartRow],%3f) : SSR: $(BestMSSR,%5f) Slope: $(BestMslop,%5f) MSE: $(BestMMSE,%5f);
+sliceMSEfit[C]$   = fit line for least MSE;
+
+
+
+
+
+int counter = 1;
+loop(sheetnum,1,totSheets)
+{
+  string currentdatasheet$ = datasheets.GetAt(sheetnum)$;
+  string strTemp$ = datatemps.GetAt(sheetnum)$;
+  int temp = %(strTemp$);
+  
+  loop(m,1,runsPer)
+  {
+    range mn               = [MBook1]currentdatasheet$!$(m);
+    sliceTemp[counter]     = temp;
+    sliceSSR[counter]      = mn[BestSSRNumer,BestSSRDenom];
+    sliceSSRfit[counter]   = temp*BestSSRslop+BestSSRint;
+    sliceB[counter]        = mn[BestBNumer,BestBDenom];
+    sliceBfit[counter]     = temp*BestBslop+BestBint;
+    sliceChose[counter]    = mn[inNumer,inDenom];
+    sliceChosefit[counter] = (temp)*fitB[inNumer,inDenom]+fitA[inNumer,inDenom];
+    sliceMSE[counter]      = mn[BestMNumer,BestMDenom];
+    sliceMSEfit[counter]   = temp*BestMslop+BestMint;
+
+    counter = counter+1;
+  }
+}
+
+window -e Graph9;
+Plotxy iy:=((sliceTemp,sliceMSE,),(sliceTemp,sliceSSR,),(sliceTemp,sliceB),(sliceTemp,sliceChose)) plot:=201 ogl:=[Graph9]!1;
+Plotxy iy:=((sliceTemp,sliceMSEfit),(sliceTemp,sliceSSRfit),(sliceTemp,sliceBfit),(sliceTemp,sliceChosefit)) plot:=200 ogl:=[Graph9]!2;
