@@ -1,0 +1,39 @@
+// This script comes from '9-20 cold box\UNTITLED.opj' 
+//  it just rearranges OceanOptics CCD UV-Vis data to a more workable format 
+//  
+//  this served as a test script for a longer version i ran later
+//  
+//  
+
+
+
+string shtname$  = output13976;
+string bkname$   = output13976; 
+string shtname2$ = background;
+
+range indataX = [bkname$]shtname$!A;
+range indatabg = [bkname$]shtname2$!I;
+
+range outX = [bkname$]Sheet1!A;
+outX = indataX;
+outX[C]$ = indataX[C]$;
+outX[L]$ = Wavelength;
+outX[U]$ = nm;
+int numcols = 10;                                                   //SET TO SMALL NUMBER TO TEST FAST
+
+loop(coli,1, numcols)  
+{
+int coljinY = coli+1;
+range tempin = [bkname$]shtname$!$(coljinY);
+
+int coljY = coli+1;
+range tempY = [bkname$]Sheet1!$(coljY);
+
+
+tempY[C]$ = $(12);
+tempY[L]$ = Count;
+tempY[U]$ = num;
+tempY = tempin-indatabg;
+
+
+}
