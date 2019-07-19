@@ -1,0 +1,132 @@
+// This script comes from 'AllTogether.opj' 
+//  It takes data from a single column of the large data sheet called "fulldata1" (i know)
+//  and applies various single masks to the data
+//  as well as multiple masks simultaneously (which was rarely helpful)
+//  to find relationships between data
+//  mostly by making it easier to graph things
+
+
+int thisDataSheet = 11; // Max Temp Change
+int thisDataCol = 11;   // Max temp Change
+
+stringarray datasheets;
+datasheets.Add("fulldata1");         //1
+datasheets.Add("MASK rastered");     //2
+datasheets.Add("MASK Clipped");      //3
+datasheets.Add("MASK material");     //4
+datasheets.Add("MASK Ipeak");        //5
+datasheets.Add("MASK thickness");    //6
+datasheets.Add("FWHM");              //7
+datasheets.Add("A");                 //8
+datasheets.Add("B/A");               //9 
+datasheets.Add("Scale f");           //10
+datasheets.Add("Max Temp Change");   //11
+ 
+stringarray datacols; // which columns in fulldata hold the good stuff
+datacols.Add("O");                        //1
+datacols.Add("P");                        //2
+datacols.Add("Q");                        //3
+datacols.Add("R");                        //4
+datacols.Add("S");                        //5
+datacols.Add("T");                        //6
+datacols.Add("U");                        //7
+datacols.Add("V");                        //8
+datacols.Add("W");                        //9
+datacols.Add("X");                        //10
+datacols.Add("Y1"); // Max Temp Change    //11
+datacols.Add("Y2"); // FWHM               //12
+datacols.Add("Y3"); // A                  //13
+datacols.Add("Y4"); // B/A                //14
+datacols.Add("Y5"); // scaleF             //15
+datacols.Add("Y6"); //                    //16 
+datacols.Add("Y7"); //                    //17
+datacols.Add("Y9"); //     T0 STD         //18
+datacols.Add("Y10"); //   FWHM STD        //19
+datacols.Add("Y11"); //   A STD           //20
+datacols.Add("Y12"); //   scale f         //21
+
+
+loop(importCol,1,21) //1 to 18 columns to import from fulldata page
+{
+string SourceSheet$ = datasheets.GetAt(1)$;             // source sheet name
+string DestSheet$ = datasheets.GetAt(thisDataSheet)$;   // destination sheet name AKA current sheet name
+string Sourcecol$ = datacols.GetAt(importCol)$;         // 
+range r1 = [Book3]SourceSheet$!col(Sourcecol$);         // grab columns from Fulldata
+range r2 = [Book3]DestSheet$!col(Sourcecol$);           // paste into new sheet
+r2 = r1;
+r2.lname$=r1.lname$;
+r2.unit$=r1.unit$;
+r2[C]$ = r1[C]$;
+
+}
+
+//apply a single mask to the data set to be masked
+loop(Masks,2,6) //2-6 are the current mask sheets
+{
+string DestSheet$ = datasheets.GetAt(thisDataSheet)$;     // variable pointing back at this sheet
+string SourceSheet$ = datasheets.GetAt(Masks)$;           // variable pointing to the current mask sheet
+string DataIncol$ = datacols.GetAt(thisDataCol)$;         // variable pointing to MAX TEMP CHANGE
+range DatatobeMasked = [Book3]DestSheet$!col(DataIncol$); // data column we want masks applied to
+range r1 =  [Book3]SourceSheet$!col(1);                   // number of masking columns
+int MaskColNum = r1[1]+1;                                 // the plus one is becaue the first column just holds number
+int totSampNum = DatatobeMasked.nRows;
+
+loop(num,2,MaskColNum) // start at 2 for same reason as above
+{ 
+range curMaskCol = [Book3]SourceSheet$!col($(num)); // to be applied to DatatobeMasked
+string numName$ = $(num);
+string cName$ = curMaskCol.lname$ + numName$; // currentMaskCol.lname$; 
+range outputRange = [Book3]DestSheet$!col(cName$); //where the data goes 
+loop(jrows,1,totSampNum)
+{outputRange[jrows] = curMaskCol[jrows] * DatatobeMasked[jrows];}
+outputRange.unit$=DatatobeMasked.unit$;
+outputRange.lname$ = DatatobeMasked.lname$;
+outputRange[C]$ = curMaskCol[C]$;
+
+}
+
+}
+
+
+
+//apply more than one mask to the data set to be masked
+loop(Mask1,2,6)                                            // 2-5 are the current mask sheets
+{
+string SourceSheet1$ = datasheets.GetAt(Mask1)$;           // variable pointing to the current mask sheet
+range r1 =  [Book3]SourceSheet1$!col(1);                   // number of masking columns
+int MaskColNum1 = r1[1]+1;                                 // the plus one is becaue the first column just holds number
+
+string DestSheet$ = datasheets.GetAt(thisDataSheet)$;      // variable pointing back at this sheet
+string DataIncol$ = datacols.GetAt(thisDataCol)$;          // variable pointing to MAX TEMP CHANGE
+range DatatobeMasked = [Book3]DestSheet$!col(DataIncol$);  // data column we want masks applied to
+int totSampNum = DatatobeMasked.nRows; 
+
+loop(Mask2,Mask1+1,6)                                      // try to reduce duplicate but reversed masking
+{
+string SourceSheet2$ = datasheets.GetAt(Mask2)$;           // variable pointing to the 2nd mask sheet
+range r2 =  [Book3]SourceSheet2$!col(1);                   // number of masking columns
+int MaskColNum2 = r2[1]+1;                                 // the plus one is becaue the first column just holds number
+
+loop(num2,2,MaskColNum2)  // start at 2 for same reason as above
+{ 
+loop(num1,2,MaskColNum1)       // start at 2 for same reason as above
+{ 
+string numb1$ = $(num1);
+string numb2$ = $(num2); 
+string maskb1$ = $(Mask1);
+string maskb2$ = $(Mask2);
+string cName$ = "BB" + maskb1$ + numb1$ + maskb2$ + numb2$;
+range curMask1Col = [Book3]SourceSheet1$!col($(num1));     // one mask to be applied to DatatobeMasked
+range curMask2Col = [Book3]SourceSheet2$!col($(num2));     // mask two to be applied to DatatobeMasked                              // currentMaskCol.lname$; 
+range outputRange = [Book3]DestSheet$!col(cName$);         //where the data goes 
+loop(jrows,1,totSampNum)
+{outputRange[jrows] = curMask1Col[jrows] *curMask2Col[jrows] * DatatobeMasked[jrows];}
+outputRange.unit$=DatatobeMasked.unit$;
+outputRange.lname$ = DatatobeMasked.lname$;
+//outputRange.name$ = cName$;
+outputRange[C]$ = curMask1Col[C]$+" and " +curMask2Col[C]$; 
+//outputRange[C]$ = cName$;
+}
+}
+}
+}
